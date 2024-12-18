@@ -3,6 +3,9 @@ import sys
 import joblib
 import logging
 import numpy as np
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.pipeline import Pipeline
 
 # Set up logging
 logging.basicConfig(
@@ -21,34 +24,11 @@ except ModuleNotFoundError:
 import gradio as gr
 import pandas as pd
 
-# Load and inspect the pipeline
+# Load the pipeline
 try:
     full_pipeline = joblib.load('model_with_preprocessing.pkl')
     logger.info("Pipeline loaded successfully")
-    logger.info(f"Pipeline type: {type(full_pipeline)}")
-    
-    # Debug information about pipeline structure
-    if isinstance(full_pipeline, dict):
-        logger.info(f"Pipeline keys: {list(full_pipeline.keys())}")
-        # Common key variations
-        regressor_keys = ['regressor', 'model', 'estimator', 'classifier', 'rf', 'random_forest']
-        preprocessor_keys = ['preprocessor', 'preprocess', 'preprocessing', 'transform', 'transformer']
-        
-        # Find the actual keys
-        regressor_key = next((k for k in full_pipeline.keys() if k in regressor_keys), None)
-        preprocessor_key = next((k for k in full_pipeline.keys() if k in preprocessor_keys), None)
-        
-        if regressor_key:
-            logger.info(f"Found regressor with key: {regressor_key}")
-        else:
-            logger.error("No regressor key found!")
-            
-        if preprocessor_key:
-            logger.info(f"Found preprocessor with key: {preprocessor_key}")
-        else:
-            logger.error("No preprocessor key found!")
-    else:
-        logger.info(f"Pipeline attributes: {dir(full_pipeline)}")
+    logger.info(f"Pipeline keys: {list(full_pipeline.keys())}")
 except Exception as e:
     logger.error(f"Error loading pipeline: {e}")
     sys.exit(1)
@@ -57,64 +37,68 @@ def predict_biochar(Fixed_carbon, Volatile_matter, Ash, C, H, O, N, S,
                     Cellulose, Hemicellulose, Lignin, Residence_time, 
                     Temperature, Heating_rate, Type_of_Feedstock):
     try:
-        # Convert inputs to float
-        numeric_inputs = {
-            'Fixed carbon': float(Fixed_carbon),
-            'Volatile matter': float(Volatile_matter),
-            'Ash': float(Ash),
-            'C': float(C),
-            'H': float(H),
-            'O': float(O),
-            'N': float(N),
-            'S': float(S),
-            'Cellulose': float(Cellulose),
-            'Hemicellulose': float(Hemicellulose),
-            'Lignin': float(Lignin),
-            'Residence time (min)': float(Residence_time),
-            'Temperature (°C)': float(Temperature),
-            'Heating rate (°C/min)': float(Heating_rate),
-            'Type of Feedstock': Type_of_Feedstock
-        }
+        # Create input DataFrame with exact column names
+        input_data = pd.DataFrame({
+            'Fixed carbon': [float(Fixed_carbon)],
+            'Volatile matter': [float(Volatile_matter)],
+            'Ash': [float(Ash)],
+            'C': [float(C)],
+            'H': [float(H)],
+            'O': [float(O)],
+            'N': [float(N)],
+            'S': [float(S)],
+            'Cellulose': [float(Cellulose)],
+            'Hemicellulose': [float(Hemicellulose)],
+            'Lignin': [float(Lignin)],
+            'Residence time (min)': [float(Residence_time)],
+            'Temperature (°C)': [float(Temperature)],
+            'Heating rate (°C/min)': [float(Heating_rate)],
+            'Type of Feedstock': [Type_of_Feedstock]
+        })
         
-        # Create input DataFrame
-        input_data = pd.DataFrame([numeric_inputs])
         logger.info("Input data created successfully")
+        logger.info(f"Input columns: {list(input_data.columns)}")
+        logger.info(f"Input data shape: {input_data.shape}")
         
-        # Check if pipeline is a dictionary and handle different key names
-        if isinstance(full_pipeline, dict):
-            logger.info("Pipeline is a dictionary, using components directly")
-            logger.info(f"Available keys: {list(full_pipeline.keys())}")
-            
-            # Find the correct keys
-            regressor_key = next((k for k in full_pipeline.keys() if k.lower() in ['regressor', 'model', 'estimator', 'classifier', 'rf', 'random_forest']), None)
-            preprocessor_key = next((k for k in full_pipeline.keys() if k.lower() in ['preprocessor', 'preprocess', 'preprocessing', 'transform', 'transformer']), None)
-            
-            if not regressor_key or not preprocessor_key:
-                raise KeyError(f"Missing required components. Found keys: {list(full_pipeline.keys())}")
-            
-            preprocessed_data = full_pipeline[preprocessor_key].transform(input_data)
-            predictions = full_pipeline[regressor_key].predict(preprocessed_data)
+        # Instead of using the preprocessor directly, let's recreate the pipeline
+        numeric_features = ['Fixed carbon', 'Volatile matter', 'Ash', 'C', 'H', 'O', 'N', 'S', 
+                          'Cellulose', 'Hemicellulose', 'Lignin', 'Residence time (min)', 
+                          'Temperature (°C)', 'Heating rate (°C/min)']
+        categorical_features = ['Type of Feedstock']
+        
+        # Create a new preprocessing pipeline
+        preprocessor = ColumnTransformer(
+            transformers=[
+                ('num', StandardScaler(), numeric_features),
+                ('cat', OneHotEncoder(drop='first', sparse=False), categorical_features)
+            ])
+        
+        # Try to use the loaded model's components
+        if isinstance(full_pipeline['preprocessor'], ColumnTransformer):
+            # If we can, use the fitted preprocessor
+            preprocessed_data = full_pipeline['preprocessor'].transform(input_data)
         else:
-            logger.info("Using full pipeline for prediction")
-            predictions = full_pipeline.predict(input_data)
+            # Otherwise use our new preprocessor
+            preprocessed_data = preprocessor.fit_transform(input_data)
+            
+        logger.info(f"Preprocessed data shape: {preprocessed_data.shape}")
         
+        # Make predictions using the model
+        predictions = full_pipeline['model'].predict(preprocessed_data)
         logger.info("Predictions generated successfully")
         
-        # Format predictions
         predictions = predictions.flatten() if isinstance(predictions, np.ndarray) else predictions
         return tuple(float(x) for x in predictions)
     
     except ValueError as e:
         logger.error(f"Value error in input processing: {str(e)}")
         return tuple(["Error: Please check input values"] * 11)
-    except KeyError as e:
-        logger.error(f"Pipeline structure error: {str(e)}")
-        return tuple(["Error: Pipeline configuration issue"] * 11)
     except Exception as e:
         logger.error(f"Unexpected error in prediction: {str(e)}")
+        logger.error(f"Error details: {str(e)}")
         return tuple(["Error: Prediction failed"] * 11)
 
-# Gradio Interface remains the same
+# Gradio Interface
 interface = gr.Interface(
     fn=predict_biochar,
     inputs=[
@@ -150,17 +134,18 @@ interface = gr.Interface(
         gr.Number(label="Biochar Yield (%)"),
         gr.Number(label="HHV (MJ/kg)"),
         gr.Number(label="Energy Yield (%)"),
-        gr.Number(label="Fixed Carbon"),
-        gr.Number(label="Volatile Matter"),
-        gr.Number(label="Ash"),
-        gr.Number(label="C"),
-        gr.Number(label="H"),
-        gr.Number(label="O"),
-        gr.Number(label="N"),
-        gr.Number(label="S")
+        gr.Number(label="Fixed Carbon (%)"),
+        gr.Number(label="Volatile Matter (%)"),
+        gr.Number(label="Ash (%)"),
+        gr.Number(label="C (%)"),
+        gr.Number(label="H (%)"),
+        gr.Number(label="O (%)"),
+        gr.Number(label="N (%)"),
+        gr.Number(label="S (%)")
     ],
-    title="Biochar Prediction"
+    title="Biochar Prediction",
+    description="Enter the biomass characteristics to predict biochar properties. All percentage inputs should be in %."
 )
 
 if __name__ == "__main__":
-    interface.launch()
+    interface.launch(share=True)
