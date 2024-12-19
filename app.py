@@ -1,151 +1,73 @@
-import subprocess
-import sys
-import joblib
-import logging
+import os
+import tensorflow as tf
+import pickle
 import numpy as np
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
-from sklearn.pipeline import Pipeline
+import streamlit as st
 
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Disable GPU if necessary
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
-# Force install scikit-learn if not found
-try:
-    import sklearn
-except ModuleNotFoundError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "scikit-learn"])
-    import sklearn
+# Load model and scalers
+def load_model_and_scalers():
+    global model, input_scaler, output_scaler
+    model = tf.keras.models.load_model('biochar_model.h5')
+    model.compile(optimizer='adam', loss='mse', metrics=['mae', 'mse'])
+    with open('biochar_scalers.pkl', 'rb') as f:
+        input_scaler, output_scaler = pickle.load(f)
 
-import gradio as gr
-import pandas as pd
+load_model_and_scalers()
 
-# Load the pipeline
-try:
-    full_pipeline = joblib.load('model_with_preprocessing.pkl')
-    logger.info("Pipeline loaded successfully")
-    logger.info(f"Pipeline keys: {list(full_pipeline.keys())}")
-except Exception as e:
-    logger.error(f"Error loading pipeline: {e}")
-    sys.exit(1)
+# Streamlit UI
+st.title("Biochar Prediction")
+st.write("Enter the characteristics of feedstock to predict biochar yield and properties:")
 
-def predict_biochar(Fixed_carbon, Volatile_matter, Ash, C, H, O, N, S,
-                    Cellulose, Hemicellulose, Lignin, Residence_time, 
-                    Temperature, Heating_rate, Type_of_Feedstock):
+# Collect input data
+temperature = st.number_input('Temperature (°C)', min_value=-100.0, max_value=1000.0, value=300.0)
+residence_time = st.number_input('Residence time (min)', min_value=1.0, max_value=300.0, value=30.0)
+heating_rate = st.number_input('Heating rate (°C/min)', min_value=0.1, max_value=100.0, value=10.0)
+cellulose = st.number_input('Cellulose content (%)', min_value=0.0, max_value=100.0, value=40.0)
+hemicellulose = st.number_input('Hemicellulose content (%)', min_value=0.0, max_value=100.0, value=30.0)
+lignin = st.number_input('Lignin content (%)', min_value=0.0, max_value=100.0, value=20.0)
+extractives = st.number_input('Extractives (%)', min_value=0.0, max_value=100.0, value=5.0)
+moisture = st.number_input('Moisture content (%)', min_value=0.0, max_value=100.0, value=10.0)
+fixed_carbon = st.number_input('Fixed carbon (%)', min_value=0.0, max_value=100.0, value=30.0)
+volatile_matter = st.number_input('Volatile matter (%)', min_value=0.0, max_value=100.0, value=50.0)
+ash = st.number_input('Ash content (%)', min_value=0.0, max_value=100.0, value=5.0)
+carbon = st.number_input('C content (%)', min_value=0.0, max_value=100.0, value=50.0)
+hydrogen = st.number_input('H content (%)', min_value=0.0, max_value=100.0, value=6.0)
+oxygen = st.number_input('O content (%)', min_value=0.0, max_value=100.0, value=40.0)
+nitrogen = st.number_input('N content (%)', min_value=0.0, max_value=100.0, value=1.0)
+
+# Create a list of input features (remove sulfur if it is extra)
+input_features = [
+    temperature, residence_time, heating_rate, cellulose, hemicellulose, lignin,
+    extractives, moisture, fixed_carbon, volatile_matter, ash, carbon,
+    hydrogen, oxygen, nitrogen
+]
+
+# Make prediction when button is clicked
+if st.button('Predict'):
     try:
-        # Create input DataFrame with exact column names
-        input_data = pd.DataFrame({
-            'Fixed carbon': [float(Fixed_carbon)],
-            'Volatile matter': [float(Volatile_matter)],
-            'Ash': [float(Ash)],
-            'C': [float(C)],
-            'H': [float(H)],
-            'O': [float(O)],
-            'N': [float(N)],
-            'S': [float(S)],
-            'Cellulose': [float(Cellulose)],
-            'Hemicellulose': [float(Hemicellulose)],
-            'Lignin': [float(Lignin)],
-            'Residence time (min)': [float(Residence_time)],
-            'Temperature (°C)': [float(Temperature)],
-            'Heating rate (°C/min)': [float(Heating_rate)],
-            'Type of Feedstock': [Type_of_Feedstock]
-        })
+        # Convert input features to numpy array
+        input_data = np.array([input_features])
+        # Scale input data
+        input_scaled = input_scaler.transform(input_data)
+        # Make prediction
+        prediction_scaled = model.predict(input_scaled)
+        # Inverse scale prediction
+        prediction = output_scaler.inverse_transform(prediction_scaled)
         
-        logger.info("Input data created successfully")
-        logger.info(f"Input columns: {list(input_data.columns)}")
-        logger.info(f"Input data shape: {input_data.shape}")
-        
-        # Instead of using the preprocessor directly, let's recreate the pipeline
-        numeric_features = ['Fixed carbon', 'Volatile matter', 'Ash', 'C', 'H', 'O', 'N', 'S', 
-                          'Cellulose', 'Hemicellulose', 'Lignin', 'Residence time (min)', 
-                          'Temperature (°C)', 'Heating rate (°C/min)']
-        categorical_features = ['Type of Feedstock']
-        
-        # Create a new preprocessing pipeline
-        preprocessor = ColumnTransformer(
-            transformers=[
-                ('num', StandardScaler(), numeric_features),
-                ('cat', OneHotEncoder(drop='first', sparse=False), categorical_features)
-            ])
-        
-        # Try to use the loaded model's components
-        if isinstance(full_pipeline['preprocessor'], ColumnTransformer):
-            # If we can, use the fitted preprocessor
-            preprocessed_data = full_pipeline['preprocessor'].transform(input_data)
-        else:
-            # Otherwise use our new preprocessor
-            preprocessed_data = preprocessor.fit_transform(input_data)
-            
-        logger.info(f"Preprocessed data shape: {preprocessed_data.shape}")
-        
-        # Make predictions using the model
-        predictions = full_pipeline['model'].predict(preprocessed_data)
-        logger.info("Predictions generated successfully")
-        
-        predictions = predictions.flatten() if isinstance(predictions, np.ndarray) else predictions
-        return tuple(float(x) for x in predictions)
-    
-    except ValueError as e:
-        logger.error(f"Value error in input processing: {str(e)}")
-        return tuple(["Error: Please check input values"] * 11)
+        # Display results
+        st.write("### Prediction Results:")
+        st.write(f"**Biochar Yield (%)**: {prediction[0][0]}")
+        st.write(f"**HHV (MJ/kg)**: {prediction[0][1]}")
+        st.write(f"**Energy Yield (%)**: {prediction[0][2]}")
+        st.write(f"**Fixed Carbon**: {prediction[0][3]}")
+        st.write(f"**Volatile Matter**: {prediction[0][4]}")
+        st.write(f"**Ash**: {prediction[0][5]}")
+        st.write(f"**C**: {prediction[0][6]}")
+        st.write(f"**H**: {prediction[0][7]}")
+        st.write(f"**O**: {prediction[0][8]}")
+        st.write(f"**N**: {prediction[0][9]}")
     except Exception as e:
-        logger.error(f"Unexpected error in prediction: {str(e)}")
-        logger.error(f"Error details: {str(e)}")
-        return tuple(["Error: Prediction failed"] * 11)
-
-# Gradio Interface
-interface = gr.Interface(
-    fn=predict_biochar,
-    inputs=[
-        gr.Number(label="Fixed carbon"),
-        gr.Number(label="Volatile matter"),
-        gr.Number(label="Ash"),
-        gr.Number(label="C"),
-        gr.Number(label="H"),
-        gr.Number(label="O"),
-        gr.Number(label="N"),
-        gr.Number(label="S"),
-        gr.Number(label="Cellulose"),
-        gr.Number(label="Hemicellulose"),
-        gr.Number(label="Lignin"),
-        gr.Number(label="Residence time (min)"),
-        gr.Number(label="Temperature (°C)"),
-        gr.Number(label="Heating rate (°C/min)"),
-        gr.Dropdown(
-            choices=[
-                'Corncob', 'Corn stover', 'Bagasse', 'Cocopeat', 'Coconut shell', 
-                'Coconut fiber', 'Wheat straw', 'Rice husk', 'Rice Straw', 'Pine', 
-                'Pinewood sawdust', 'Pine wood', 'Bamboo', 'Orange Bagasse', 
-                'Orange pomace', 'Rapeseed oil cake', 'Rape stalk', 'Cassava stem', 
-                'Cassava rhizome', 'Cotton stalk', 'Palm kernel shell', 'Wood stem', 
-                'Wood bark', 'Agro food waste', 'Agro-food waste', 'Canola hull', 
-                'Oat hull', 'Straw pallet', 'Vine pruning', 'Poultry litter', 
-                'Hinoki cypress'
-            ],
-            label="Type of Feedstock"
-        )
-    ],
-    outputs=[
-        gr.Number(label="Biochar Yield (%)"),
-        gr.Number(label="HHV (MJ/kg)"),
-        gr.Number(label="Energy Yield (%)"),
-        gr.Number(label="Fixed Carbon (%)"),
-        gr.Number(label="Volatile Matter (%)"),
-        gr.Number(label="Ash (%)"),
-        gr.Number(label="C (%)"),
-        gr.Number(label="H (%)"),
-        gr.Number(label="O (%)"),
-        gr.Number(label="N (%)"),
-        gr.Number(label="S (%)")
-    ],
-    title="Biochar Prediction",
-    description="Enter the biomass characteristics to predict biochar properties. All percentage inputs should be in %."
-)
-
-if __name__ == "__main__":
-    interface.launch(share=True)
+        st.write(f"Error: {str(e)}")
