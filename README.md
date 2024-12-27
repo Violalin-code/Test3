@@ -10,19 +10,9 @@ categorized into one of two classes:
 • Class "0": Failed experiments resulting in amorphous, mixed, dense, or layered phases.
 • Class "1": Successful experiments resulting in a pure zeolite phase.
 The dataset includes the following parameters:
-1. Seed properties:
-o Seed amount (normalized to SiO2 weight = 1)
-o Seed framework density (FD) in T/Å3
-o Seed Si/Al molar ratio (measured using ICP-AES)
 
-2. Gel composition:
-o SiO2 (normalized to 1)
-o NaOH/SiO2 molar ratio
-o B2O3/SiO2 molar ratio
-o H2O/SiO2 molar ratio
-o OTMAC/SiO2 molar ratio (SDA)
-3. Crystallization conditions:
-o Crystallization temperature (°C)
-o Crystallization time (days)
+1. Seed properties: Seed amount (normalized to SiO2 weight = 1), Seed framework density (FD) in T/Å3, Seed Si/Al molar ratio (measured using ICP-AES)
+2. Gel composition: SiO2 (normalized to 1), NaOH/SiO2 molar ratio, B2O3/SiO2 molar ratio, H2O/SiO2 molar ratio, OTMAC/SiO2 molar ratio (SDA)
+3. Crystallization conditions: Crystallization temperature (°C), Crystallization time (days)
 
 Streamlit : https://d8dmpo3gdtunubwa9bgigr.streamlit.app/
