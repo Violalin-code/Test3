@@ -5,9 +5,7 @@ reducing or eliminating the need for OSDAs. Despite its potential, identifying o
 remains a challenge due to the high-dimensional chemical space involved.
 
 To address this challenge, your task is to develop a machine learning model that predicts the success of seed-
-assisted zeolite synthesis experiments using a provided dataset. The dataset contains 385 historical records of
-
-seed-assisted zeolite synthesis experiments conducted in a trial-and-error manner. Each experiment is
+assisted zeolite synthesis experiments using a provided dataset. The dataset contains 385 historical records of seed-assisted zeolite synthesis experiments conducted in a trial-and-error manner. Each experiment is
 categorized into one of two classes:
 • Class "0": Failed experiments resulting in amorphous, mixed, dense, or layered phases.
 • Class "1": Successful experiments resulting in a pure zeolite phase.
