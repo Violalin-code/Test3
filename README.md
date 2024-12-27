@@ -48,10 +48,10 @@ Use the command:
 Streamlit : https://d8dmpo3gdtunubwa9bgigr.streamlit.app/
 
 ## Project Files
-biochar_dataset.csv: Dataset containing feedstock properties and pyrolysis conditions.
-model.pkl: Trained machine learning model for predictions.
-scaler.pkl: Preprocessing scaler for input features.
-script_name.py: Streamlit-based application script.
+- biochar_dataset.csv: Dataset containing feedstock properties and pyrolysis conditions.
+- model.pkl: Trained machine learning model for predictions.
+- scaler.pkl: Preprocessing scaler for input features.
+- script_name.py: Streamlit-based application script.
 
 ## Project Workflow
 ### 1. Data Preprocessing
