@@ -15,9 +15,6 @@ o Seed amount (normalized to SiO2 weight = 1)
 o Seed framework density (FD) in T/Å3
 o Seed Si/Al molar ratio (measured using ICP-AES)
 
-Click here to
-download
-
 2. Gel composition:
 o SiO2 (normalized to 1)
 o NaOH/SiO2 molar ratio
