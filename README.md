@@ -1,14 +1,14 @@
 # Biochar Yield and Composition Prediction System: A Machine Learning Approach
 
 ## Overview
-- This project focuses on developing a Biochar Yield and Composition Prediction System using machine learning techniques. Biochar production through pyrolysis of organic waste offers a sustainable approach to reducing dependence on conventional energy sources and mitigating global warming. To address the challenges posed by existing prediction models—such as computational inefficiency, complexity, and limited accuracy for unseen scenario. This project utilizes advanced machine learning models trained on feedstock compositions and pyrolysis process conditions.
+This project focuses on developing a Biochar Yield and Composition Prediction System using machine learning techniques. Biochar production through pyrolysis of organic waste offers a sustainable approach to reducing dependence on conventional energy sources and mitigating global warming. To address the challenges posed by existing prediction models—such as computational inefficiency, complexity, and limited accuracy for unseen scenario. This project utilizes advanced machine learning models trained on feedstock compositions and pyrolysis process conditions.
 
 ## Table of Contents
-ML Model
-Features
-How to Run the Project
-Project Files
-Project Workflow
+- [ML Model](#ML-Model)
+- [Features](#Features)
+- [How to Run the Project](#How-to-Run)
+- [Project Files](#Project-Files)
+- [Project Workflow](#Project-Workflow)
 
 ## ML Model
 The machine learning pipeline includes various regression models trained to predict biochar yield and compositions based on feedstock characteristics and pyrolysis conditions. Emphasis is placed on optimizing model performance for generalizability to unseen data.
@@ -53,7 +53,7 @@ model.pkl: Trained machine learning model for predictions.
 scaler.pkl: Preprocessing scaler for input features.
 script_name.py: Streamlit-based application script.
 
-#Project Workflow
+## Project Workflow
 ### 1. Data Preprocessing
 - Scaling and Normalization: Feedstock compositions and process conditions are standardized for model training.
 - Feature Engineering: Relevant features are selected to enhance model performance.
