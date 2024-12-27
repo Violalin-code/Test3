@@ -1,4 +1,4 @@
-# Biochar Yield and Composition Prediction System: A Machine Learning Approach
+# Biochar Yield and Composition Prediction System: A Machine Learning Approachm 🪵🔥
 
 ## Overview
 This project focuses on developing a Biochar Yield and Composition Prediction System using machine learning techniques. Biochar production through pyrolysis of organic waste offers a sustainable approach to reducing dependence on conventional energy sources and mitigating global warming. To address the challenges posed by existing prediction models—such as computational inefficiency, complexity, and limited accuracy for unseen scenario. This project utilizes advanced machine learning models trained on feedstock compositions and pyrolysis process conditions.
